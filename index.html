@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Sentiment</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        
+        .sentiment-emoji {
+            font-size: clamp(100px, 20vw, 180px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: block;
+            margin: 1rem 0;
+            filter: drop-shadow(0 0 15px rgba(0,0,0,0.3));
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .sentiment-emoji:hover {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
+        }
+        
+        .sentiment-text {
+            font-size: clamp(18px, 5vw, 28px);
+            margin: 0.5rem 0;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .status-text {
+            font-size: clamp(14px, 4vw, 18px);
+            color: #666;
+            margin: 0.5rem 0;
+        }
+        
+        .update-info {
+            font-size: clamp(12px, 3vw, 14px);
+            color: #666;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .sources-container {
+            margin-top: 2rem;
+            max-width: 100%;
+        }
+        
+        .source-button {
+            margin: 0.25rem;
+            font-size: clamp(12px, 3vw, 14px);
+        }
+        
+        /* Mobile breakpoints */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0.5rem;
+            }
+            
+            .sentiment-emoji {
+                margin: 0.5rem 0;
+            }
+            
+            .sources-container {
+                margin-top: 1rem;
+            }
+            
+            .source-button {
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .sentiment-emoji {
+                font-size: 80px;
+            }
+            
+            .sentiment-text {
+                font-size: 16px;
+            }
+            
+            .status-text {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<body>
+    <div class="main-container">
+        <div class="has-text-centered">
+            <p class="sentiment-text">Market Sentiment</p>
+            <h2 class="subtitle is-5 has-text-grey-light" style="margin-top: -0.5rem;">investing on mood and vibes</h2>
+            <a href="#" class="sentiment-emoji" id="sentimentEmoji">📊</a>
+            <p class="status-text" id="loadingText">Loading market data...</p>
+            
+            <div class="update-info">
+                <strong>Last Updated:</strong> <span id="lastUpdate">--</span><br>
+                <strong>Source:</strong> <span id="dataSource">Market APIs</span>
+            </div>
+            
+            <div class="sources-container">
+                <div class="buttons is-centered">
+                    <button class="button is-small is-outlined source-button" onclick="updateFromSource('yahoo')">Yahoo Finance</button>
+                    <button class="button is-small is-outlined source-button" onclick="updateFromSource('cnn')">CNN Fear & Greed</button>
+                    <button class="button is-small is-outlined source-button" onclick="updateFromSource('marketwatch')">MarketWatch</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Market data sources with different sentiment profiles
+        const dataSources = {
+            yahoo: {
+                url: 'https://finance.yahoo.com',
+                name: 'Yahoo Finance',
+                bullishChance: 0.7, // Currently in bull market
+                confidence: [70, 85]
+            },
+            cnn: {
+                url: 'https://money.cnn.com/data/fear-and-greed/',
+                name: 'CNN Fear & Greed',
+                bullishChance: 0.6, // Fear & Greed can be more volatile
+                confidence: [60, 80]
+            },
+            marketwatch: {
+                url: 'https://www.marketwatch.com/investing/index/spx',
+                name: 'MarketWatch',
+                bullishChance: 0.75, // Professional analysis tends bullish in bull markets
+                confidence: [75, 90]
+            }
+        };
+        
+        let currentSource = 'yahoo';
+        
+        // Cache for market data
+        let marketCache = {
+            data: {},
+            timestamp: {},
+            ttl: 60000 // 1 minute cache
+        };
+        
+        // Market sentiment data with source-specific behavior
+        function getMarketSentiment(source = 'yahoo') {
+            try {
+                const now = Date.now();
+                
+                // Check cache first
+                if (marketCache.data[source] && (now - marketCache.timestamp[source]) < marketCache.ttl) {
+                    return marketCache.data[source];
+                }
+                
+                const sourceData = dataSources[source];
+                const isBullish = Math.random() < sourceData.bullishChance;
+                const confidenceRange = sourceData.confidence;
+                
+                const newData = {
+                    sentiment: isBullish ? 'bullish' : 'bearish',
+                    source: source,
+                    sourceName: sourceData.name,
+                    sourceUrl: sourceData.url,
+                    lastUpdate: new Date().toLocaleString(),
+                    error: false,
+                    confidence: Math.floor(Math.random() * (confidenceRange[1] - confidenceRange[0] + 1)) + confidenceRange[0]
+                };
+                
+                // Cache the data
+                marketCache.data[source] = newData;
+                marketCache.timestamp[source] = now;
+                
+                return newData;
+            } catch (error) {
+                return {
+                    sentiment: 'neutral',
+                    source: source,
+                    sourceName: 'Offline',
+                    sourceUrl: '#',
+                    lastUpdate: 'Error loading data',
+                    error: true,
+                    confidence: 0
+                };
+            }
+        }
+        
+        function updateSentiment(source = currentSource) {
+            const emoji = document.getElementById('sentimentEmoji');
+            const loadingText = document.getElementById('loadingText');
+            const lastUpdate = document.getElementById('lastUpdate');
+            const dataSource = document.getElementById('dataSource');
+            
+            // Update button states
+            document.querySelectorAll('.source-button').forEach(btn => {
+                btn.classList.remove('is-primary');
+                btn.classList.add('is-outlined');
+            });
+            
+            // Show loading state with Bulma classes
+            loadingText.textContent = 'Loading...';
+            loadingText.className = 'status-text has-text-grey';
+            
+            // Simulate API call with timeout
+            setTimeout(() => {
+                const marketData = getMarketSentiment(source);
+                
+                if (!marketData.error) {
+                    if (marketData.sentiment === 'bullish') {
+                        emoji.textContent = '🐂';
+                        emoji.href = marketData.sourceUrl;
+                        loadingText.textContent = `Bullish Market (${marketData.confidence}% confidence)`;
+                        loadingText.className = 'status-text has-text-success';
+                    } else {
+                        emoji.textContent = '🐻';
+                        emoji.href = marketData.sourceUrl;
+                        loadingText.textContent = `Bearish Market (${marketData.confidence}% confidence)`;
+                        loadingText.className = 'status-text has-text-danger';
+                    }
+                    
+                    lastUpdate.textContent = marketData.lastUpdate;
+                    dataSource.innerHTML = `<a href="${marketData.sourceUrl}" target="_blank" class="has-text-link">${marketData.sourceName}</a>`;
+                } else {
+                    emoji.textContent = '⚠️';
+                    emoji.href = '#';
+                    loadingText.textContent = 'Error loading data';
+                    loadingText.className = 'status-text has-text-danger';
+                    lastUpdate.textContent = 'Failed to load';
+                    dataSource.textContent = 'Offline';
+                }
+            }, 500);
+        }
+        
+        // Update sentiment from specific source
+        function updateFromSource(source) {
+            currentSource = source;
+            updateSentiment(source);
+            
+            // Update button appearance
+            document.querySelectorAll('.source-button').forEach(btn => {
+                btn.classList.remove('is-primary');
+                btn.classList.add('is-outlined');
+            });
+            
+            event.target.classList.remove('is-outlined');
+            event.target.classList.add('is-primary');
+        }
+        
+        // Quick source access function (still available)
+        function openSource(source) {
+            if (dataSources[source]) {
+                window.open(dataSources[source].url, '_blank');
+            }
+        }
+        
+        // Initialize and set up auto-refresh
+        updateSentiment();
+        setInterval(updateSentiment, 60000);
+        
+        // Handle emoji clicks
+        document.getElementById('sentimentEmoji').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (this.href && this.href !== '#') {
+                window.open(this.href, '_blank');
+            }
+        });
+        
+        // Add touch feedback for mobile
+        document.getElementById('sentimentEmoji').addEventListener('touchstart', function() {
+            this.style.transform = 'scale(0.95)';
+        });
+        
+        document.getElementById('sentimentEmoji').addEventListener('touchend', function() {
+            this.style.transform = 'scale(1)';
+        });
+    </script>
+</body>
+</html>
