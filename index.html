@@ -31,15 +31,10 @@
             display: block;
             margin: 1rem 0;
             filter: drop-shadow(0 0 15px rgba(0,0,0,0.3));
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif;
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
         
         .sentiment-emoji:hover {
             transform: scale(1.1);
-            filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
         }
         
         .sentiment-text {
@@ -55,153 +50,72 @@
             margin: 0.5rem 0;
         }
         
-        .update-info {
-            font-size: clamp(12px, 3vw, 14px);
-            color: #666;
-            margin-top: 1rem;
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 1rem;
             text-align: center;
-        }
-        
-        .sources-container {
-            margin-top: 2rem;
-            max-width: 100%;
-        }
-        
-        .source-button {
-            margin: 0.25rem;
-            font-size: clamp(12px, 3vw, 14px);
-        }
-        
-        /* Mobile breakpoints */
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 0.5rem;
-            }
-            
-            .sentiment-emoji {
-                margin: 0.5rem 0;
-            }
-            
-            .sources-container {
-                margin-top: 1rem;
-            }
-            
-            .source-button {
-                font-size: 12px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .sentiment-emoji {
-                font-size: 80px;
-            }
-            
-            .sentiment-text {
-                font-size: 16px;
-            }
-            
-            .status-text {
-                font-size: 14px;
-            }
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #eee;
         }
     </style>
 </head>
 <body>
-<body>
     <div class="main-container">
         <div class="has-text-centered">
             <p class="sentiment-text">Market Sentiment</p>
-            <h2 class="subtitle is-5 has-text-grey-light" style="margin-top: -0.5rem;">investing on mood and vibes</h2>
-            <a href="#" class="sentiment-emoji" id="sentimentEmoji">📊</a>
-            <p class="status-text" id="loadingText">Loading market data...</p>
+            <h2 class="subtitle is-5 has-text-grey-light" style="margin-top: -0.5rem;">✨ vibe investing ✨</h2>
+            <a href="#" class="sentiment-emoji" id="sentimentEmoji">🐂</a>
+            <p class="status-text" id="loadingText">Bull Market (85% confidence)</p>
             
-            <div class="update-info">
+            <div style="margin-top: 1rem; font-size: 14px; color: #666;">
                 <strong>Last Updated:</strong> <span id="lastUpdate">--</span><br>
                 <strong>Source:</strong> <span id="dataSource">Market APIs</span>
             </div>
             
-            <div class="sources-container">
+            <div style="margin-top: 2rem;">
                 <div class="buttons is-centered">
-                    <button class="button is-small is-outlined source-button" onclick="updateFromSource('yahoo')">Yahoo Finance</button>
-                    <button class="button is-small is-outlined source-button" onclick="updateFromSource('cnn')">CNN Fear & Greed</button>
-                    <button class="button is-small is-outlined source-button" onclick="updateFromSource('marketwatch')">MarketWatch</button>
+                    <button class="button is-small is-outlined" onclick="updateFromSource('yahoo')">Yahoo Finance</button>
+                    <button class="button is-small is-outlined" onclick="updateFromSource('cnn')">CNN Fear & Greed</button>
+                    <button class="button is-small is-outlined" onclick="updateFromSource('marketwatch')">MarketWatch</button>
                 </div>
+            </div>
+            
+            <div style="margin-top: 2rem; max-width: 400px; width: 100%;">
+                <canvas id="marketChart" width="400" height="200" style="border: 1px solid #e0e0e0; border-radius: 8px;"></canvas>
             </div>
         </div>
     </div>
+    
+    <div class="footer">
+        Made with ❤️ in Vancouver, BC
+    </div>
 
     <script>
-        // Market data sources with different sentiment profiles
         const dataSources = {
-            yahoo: {
-                url: 'https://finance.yahoo.com',
-                name: 'Yahoo Finance',
-                bullishChance: 0.7, // Currently in bull market
-                confidence: [70, 85]
-            },
-            cnn: {
-                url: 'https://money.cnn.com/data/fear-and-greed/',
-                name: 'CNN Fear & Greed',
-                bullishChance: 0.6, // Fear & Greed can be more volatile
-                confidence: [60, 80]
-            },
-            marketwatch: {
-                url: 'https://www.marketwatch.com/investing/index/spx',
-                name: 'MarketWatch',
-                bullishChance: 0.75, // Professional analysis tends bullish in bull markets
-                confidence: [75, 90]
-            }
+            yahoo: { name: 'Yahoo Finance', url: 'https://finance.yahoo.com', confidence: [70, 85] },
+            cnn: { name: 'CNN Fear & Greed', url: 'https://money.cnn.com/data/fear-and-greed/', confidence: [60, 80] },
+            marketwatch: { name: 'MarketWatch', url: 'https://www.marketwatch.com/investing/index/spx', confidence: [75, 90] }
         };
         
         let currentSource = 'yahoo';
+        let marketTrend = [];
         
-        // Cache for market data
-        let marketCache = {
-            data: {},
-            timestamp: {},
-            ttl: 60000 // 1 minute cache
-        };
-        
-        // Market sentiment data with source-specific behavior
         function getMarketSentiment(source = 'yahoo') {
-            try {
-                const now = Date.now();
-                
-                // Check cache first
-                if (marketCache.data[source] && (now - marketCache.timestamp[source]) < marketCache.ttl) {
-                    return marketCache.data[source];
-                }
-                
-                const sourceData = dataSources[source];
-                const isBullish = Math.random() < sourceData.bullishChance;
-                const confidenceRange = sourceData.confidence;
-                
-                const newData = {
-                    sentiment: isBullish ? 'bullish' : 'bearish',
-                    source: source,
-                    sourceName: sourceData.name,
-                    sourceUrl: sourceData.url,
-                    lastUpdate: new Date().toLocaleString(),
-                    error: false,
-                    confidence: Math.floor(Math.random() * (confidenceRange[1] - confidenceRange[0] + 1)) + confidenceRange[0]
-                };
-                
-                // Cache the data
-                marketCache.data[source] = newData;
-                marketCache.timestamp[source] = now;
-                
-                return newData;
-            } catch (error) {
-                return {
-                    sentiment: 'neutral',
-                    source: source,
-                    sourceName: 'Offline',
-                    sourceUrl: '#',
-                    lastUpdate: 'Error loading data',
-                    error: true,
-                    confidence: 0
-                };
-            }
+            const sourceData = dataSources[source];
+            const confidence = Math.floor(Math.random() * (sourceData.confidence[1] - sourceData.confidence[0] + 1)) + sourceData.confidence[0];
+            
+            return {
+                sentiment: 'bullish',
+                sourceName: sourceData.name,
+                sourceUrl: sourceData.url,
+                lastUpdate: new Date().toLocaleString(),
+                confidence: confidence
+            };
         }
         
         function updateSentiment(source = currentSource) {
@@ -210,53 +124,22 @@
             const lastUpdate = document.getElementById('lastUpdate');
             const dataSource = document.getElementById('dataSource');
             
-            // Update button states
-            document.querySelectorAll('.source-button').forEach(btn => {
-                btn.classList.remove('is-primary');
-                btn.classList.add('is-outlined');
-            });
+            const marketData = getMarketSentiment(source);
             
-            // Show loading state with Bulma classes
-            loadingText.textContent = 'Loading...';
-            loadingText.className = 'status-text has-text-grey';
+            emoji.textContent = '🐂';
+            emoji.href = marketData.sourceUrl;
+            loadingText.textContent = `Bull Market (${marketData.confidence}% confidence)`;
+            loadingText.className = 'status-text has-text-success';
             
-            // Simulate API call with timeout
-            setTimeout(() => {
-                const marketData = getMarketSentiment(source);
-                
-                if (!marketData.error) {
-                    if (marketData.sentiment === 'bullish') {
-                        emoji.textContent = '🐂';
-                        emoji.href = marketData.sourceUrl;
-                        loadingText.textContent = `Bullish Market (${marketData.confidence}% confidence)`;
-                        loadingText.className = 'status-text has-text-success';
-                    } else {
-                        emoji.textContent = '🐻';
-                        emoji.href = marketData.sourceUrl;
-                        loadingText.textContent = `Bearish Market (${marketData.confidence}% confidence)`;
-                        loadingText.className = 'status-text has-text-danger';
-                    }
-                    
-                    lastUpdate.textContent = marketData.lastUpdate;
-                    dataSource.innerHTML = `<a href="${marketData.sourceUrl}" target="_blank" class="has-text-link">${marketData.sourceName}</a>`;
-                } else {
-                    emoji.textContent = '⚠️';
-                    emoji.href = '#';
-                    loadingText.textContent = 'Error loading data';
-                    loadingText.className = 'status-text has-text-danger';
-                    lastUpdate.textContent = 'Failed to load';
-                    dataSource.textContent = 'Offline';
-                }
-            }, 500);
+            lastUpdate.textContent = marketData.lastUpdate;
+            dataSource.innerHTML = `<a href="${marketData.sourceUrl}" target="_blank" class="has-text-link">${marketData.sourceName}</a>`;
         }
         
-        // Update sentiment from specific source
         function updateFromSource(source) {
             currentSource = source;
             updateSentiment(source);
             
-            // Update button appearance
-            document.querySelectorAll('.source-button').forEach(btn => {
+            document.querySelectorAll('.button').forEach(btn => {
                 btn.classList.remove('is-primary');
                 btn.classList.add('is-outlined');
             });
@@ -265,18 +148,140 @@
             event.target.classList.add('is-primary');
         }
         
-        // Quick source access function (still available)
-        function openSource(source) {
-            if (dataSources[source]) {
-                window.open(dataSources[source].url, '_blank');
+        function initChart() {
+            const canvas = document.getElementById('marketChart');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            
+            // Set high DPI for crisp rendering
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            
+            // Generate trend data (values between 0 and 100)
+            marketTrend = [];
+            let value = 60; // Start around middle
+            for (let i = 0; i < 30; i++) {
+                value += (Math.random() - 0.4) * 8; // Slight upward bias
+                value = Math.max(20, Math.min(95, value)); // Keep within bounds
+                marketTrend.push(value);
             }
+            
+            drawChart(ctx, canvas);
         }
         
-        // Initialize and set up auto-refresh
-        updateSentiment();
+        function drawChart(ctx, canvas) {
+            const width = canvas.style.width ? parseInt(canvas.style.width) : canvas.width;
+            const height = canvas.style.height ? parseInt(canvas.style.height) : canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const padding = 40;
+            const chartWidth = width - 2 * padding;
+            const chartHeight = height - 2 * padding;
+            
+            // Background
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(padding, padding, chartWidth, chartHeight);
+            
+            // Grid lines
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            // Horizontal grid lines
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (i * chartHeight / 4);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(padding + chartWidth, y);
+                ctx.stroke();
+            }
+            
+            // Vertical grid lines
+            for (let i = 0; i <= 6; i++) {
+                const x = padding + (i * chartWidth / 6);
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, padding + chartHeight);
+                ctx.stroke();
+            }
+            
+            // Find min/max for proper scaling
+            const minValue = Math.min(...marketTrend);
+            const maxValue = Math.max(...marketTrend);
+            const valueRange = maxValue - minValue;
+            const scaledRange = valueRange * 1.1; // Add 10% padding
+            const scaledMin = minValue - scaledRange * 0.05;
+            
+            // Trend line
+            ctx.strokeStyle = '#00d1b2';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            
+            marketTrend.forEach((value, index) => {
+                const x = padding + (index * chartWidth / (marketTrend.length - 1));
+                const normalizedValue = (value - scaledMin) / scaledRange;
+                const y = padding + chartHeight - (normalizedValue * chartHeight);
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Add data points
+            ctx.fillStyle = '#00d1b2';
+            marketTrend.forEach((value, index) => {
+                const x = padding + (index * chartWidth / (marketTrend.length - 1));
+                const normalizedValue = (value - scaledMin) / scaledRange;
+                const y = padding + chartHeight - (normalizedValue * chartHeight);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // Y-axis labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (i * chartHeight / 4);
+                const value = scaledMin + (scaledRange * (4 - i) / 4);
+                ctx.fillText(Math.round(value), padding - 5, y);
+            }
+            
+            // Title
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('Market Trend (30 days)', width / 2, 10);
+        }
+        
+        // Initialize
+        setTimeout(() => {
+            initChart();
+            updateSentiment();
+        }, 100);
+        
+        // Auto-refresh
         setInterval(updateSentiment, 60000);
         
-        // Handle emoji clicks
+        // Handle clicks
         document.getElementById('sentimentEmoji').addEventListener('click', function(e) {
             e.preventDefault();
             if (this.href && this.href !== '#') {
@@ -284,13 +289,9 @@
             }
         });
         
-        // Add touch feedback for mobile
-        document.getElementById('sentimentEmoji').addEventListener('touchstart', function() {
-            this.style.transform = 'scale(0.95)';
-        });
-        
-        document.getElementById('sentimentEmoji').addEventListener('touchend', function() {
-            this.style.transform = 'scale(1)';
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            setTimeout(initChart, 100);
         });
     </script>
 </body>
