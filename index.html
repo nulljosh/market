@@ -110,15 +110,12 @@
     </style>
 </head>
 <body>
-    <h1 class="header">Market Sentiment</h1>
+    <h1 class="header" id="headerTitle">Bull Market</h1>
 
     <div class="main-container">
         <div class="has-text-centered" style="max-width: 600px; width: 100%; margin: 0 auto; padding: 0 1rem;">
-            <p class="status-text" id="loadingText" style="font-size: clamp(24px, 6vw, 36px); font-weight: 600; margin: 2rem 0;">Bull Market (85% confidence)</p>
-
-            <div style="margin-top: 1rem; font-size: 14px; color: #666; overflow-wrap: break-word;">
-                <strong>Last Updated:</strong> <span id="lastUpdate">--</span><br>
-                <strong>Source:</strong> <span id="dataSource">Market APIs</span>
+            <div style="margin-top: 1rem; display: flex; justify-content: center;">
+                <canvas id="marketChart" width="400" height="200" style="border: 1px solid #e0e0e0; border-radius: 8px; max-width: 100%; height: auto;"></canvas>
             </div>
 
             <div style="margin-top: 2rem;">
@@ -129,8 +126,9 @@
                 </div>
             </div>
 
-            <div style="margin-top: 2rem; display: flex; justify-content: center;">
-                <canvas id="marketChart" width="400" height="200" style="border: 1px solid #e0e0e0; border-radius: 8px; max-width: 100%; height: auto;"></canvas>
+            <div style="margin-top: 1.5rem; font-size: 14px; color: #666; overflow-wrap: break-word;">
+                <strong>Last Updated:</strong> <span id="lastUpdate">--</span><br>
+                <strong>Source:</strong> <span id="dataSource">Market APIs</span>
             </div>
         </div>
     </div>
@@ -169,18 +167,18 @@
         }
         
         function updateSentiment(source = currentSource) {
-            const loadingText = document.getElementById('loadingText');
+            const headerTitle = document.getElementById('headerTitle');
             const lastUpdate = document.getElementById('lastUpdate');
             const dataSource = document.getElementById('dataSource');
 
             const marketData = getMarketSentiment(source);
 
             if (marketData.sentiment === 'bullish') {
-                loadingText.textContent = `Bull Market (${marketData.confidence}% confidence)`;
-                loadingText.style.color = '#48c774';
+                headerTitle.textContent = 'Bull Market';
+                headerTitle.style.color = '#48c774';
             } else {
-                loadingText.textContent = `Bear Market (${marketData.confidence}% confidence)`;
-                loadingText.style.color = '#f14668';
+                headerTitle.textContent = 'Bear Market';
+                headerTitle.style.color = '#f14668';
             }
 
             lastUpdate.textContent = marketData.lastUpdate;
@@ -216,11 +214,19 @@
             canvas.style.width = rect.width + 'px';
             canvas.style.height = rect.height + 'px';
             
-            // Generate trend data (values between 0 and 100)
+            // Generate consistent trend data based on date (updates daily)
             marketTrend = [];
+            const now = new Date();
+            const dateSeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+
             let value = 60; // Start around middle
             for (let i = 0; i < 30; i++) {
-                value += (Math.random() - 0.4) * 8; // Slight upward bias
+                // Use date-based seed for consistent randomness
+                const seed = dateSeed + i;
+                const pseudoRandom = Math.sin(seed) * 10000;
+                const random = pseudoRandom - Math.floor(pseudoRandom);
+
+                value += (random - 0.4) * 8; // Slight upward bias
                 value = Math.max(20, Math.min(95, value)); // Keep within bounds
                 marketTrend.push(value);
             }
@@ -231,21 +237,21 @@
         function drawChart(ctx, canvas) {
             const width = canvas.style.width ? parseInt(canvas.style.width) : canvas.width;
             const height = canvas.style.height ? parseInt(canvas.style.height) : canvas.height;
-            
+
             ctx.clearRect(0, 0, width, height);
-            
+
             const padding = 40;
             const chartWidth = width - 2 * padding;
             const chartHeight = height - 2 * padding;
-            
+
             // Background
-            ctx.fillStyle = '#f8f9fa';
-            ctx.fillRect(padding, padding, chartWidth, chartHeight);
-            
-            // Grid lines
-            ctx.strokeStyle = '#e0e0e0';
+            ctx.fillStyle = '#fafbfc';
+            ctx.fillRect(0, 0, width, height);
+
+            // Grid lines - more subtle
+            ctx.strokeStyle = '#e8eaed';
             ctx.lineWidth = 1;
-            
+
             // Horizontal grid lines
             for (let i = 0; i <= 4; i++) {
                 const y = padding + (i * chartHeight / 4);
@@ -254,74 +260,67 @@
                 ctx.lineTo(padding + chartWidth, y);
                 ctx.stroke();
             }
-            
-            // Vertical grid lines
-            for (let i = 0; i <= 6; i++) {
-                const x = padding + (i * chartWidth / 6);
-                ctx.beginPath();
-                ctx.moveTo(x, padding);
-                ctx.lineTo(x, padding + chartHeight);
-                ctx.stroke();
-            }
-            
+
             // Find min/max for proper scaling
             const minValue = Math.min(...marketTrend);
             const maxValue = Math.max(...marketTrend);
             const valueRange = maxValue - minValue;
-            const scaledRange = valueRange * 1.1; // Add 10% padding
-            const scaledMin = minValue - scaledRange * 0.05;
-            
-            // Trend line
-            ctx.strokeStyle = '#00d1b2';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            const scaledRange = valueRange * 1.2; // Add 20% padding
+            const scaledMin = minValue - scaledRange * 0.1;
+
+            // Create gradient fill
+            const gradient = ctx.createLinearGradient(0, padding, 0, padding + chartHeight);
+            gradient.addColorStop(0, 'rgba(72, 199, 116, 0.15)');
+            gradient.addColorStop(1, 'rgba(72, 199, 116, 0.02)');
+
+            // Fill area under line
             ctx.beginPath();
-            
+            ctx.moveTo(padding, padding + chartHeight);
+
             marketTrend.forEach((value, index) => {
                 const x = padding + (index * chartWidth / (marketTrend.length - 1));
                 const normalizedValue = (value - scaledMin) / scaledRange;
                 const y = padding + chartHeight - (normalizedValue * chartHeight);
-                
+                ctx.lineTo(x, y);
+            });
+
+            ctx.lineTo(padding + chartWidth, padding + chartHeight);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Trend line - smoother
+            ctx.strokeStyle = '#48c774';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+
+            marketTrend.forEach((value, index) => {
+                const x = padding + (index * chartWidth / (marketTrend.length - 1));
+                const normalizedValue = (value - scaledMin) / scaledRange;
+                const y = padding + chartHeight - (normalizedValue * chartHeight);
+
                 if (index === 0) {
                     ctx.moveTo(x, y);
                 } else {
                     ctx.lineTo(x, y);
                 }
             });
-            
+
             ctx.stroke();
-            
-            // Add data points
-            ctx.fillStyle = '#00d1b2';
-            marketTrend.forEach((value, index) => {
-                const x = padding + (index * chartWidth / (marketTrend.length - 1));
-                const normalizedValue = (value - scaledMin) / scaledRange;
-                const y = padding + chartHeight - (normalizedValue * chartHeight);
-                
-                ctx.beginPath();
-                ctx.arc(x, y, 2, 0, 2 * Math.PI);
-                ctx.fill();
-            });
-            
-            // Y-axis labels
-            ctx.fillStyle = '#666';
-            ctx.font = '10px Arial';
+
+            // Y-axis labels - cleaner
+            ctx.fillStyle = '#999';
+            ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            
+
             for (let i = 0; i <= 4; i++) {
                 const y = padding + (i * chartHeight / 4);
                 const value = scaledMin + (scaledRange * (4 - i) / 4);
-                ctx.fillText(Math.round(value), padding - 5, y);
+                ctx.fillText(Math.round(value), padding - 8, y);
             }
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 12px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText('Market Trend (30 days)', width / 2, 10);
         }
         
         // Initialize
