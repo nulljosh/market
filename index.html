@@ -12,6 +12,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            padding-bottom: 60px;
         }
         
         .main-container {
@@ -58,9 +59,23 @@
             background: white;
             padding: 1rem;
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
             color: #666;
-            border-top: 1px solid #eee;
+        }
+
+        .footer .heart {
+            animation: heartbeat 2s ease-in-out infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            10% { transform: scale(1.2); }
+            20% { transform: scale(1); }
+            30% { transform: scale(1.15); }
+            40% { transform: scale(1); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -90,9 +105,10 @@
             </div>
         </div>
     </div>
-    
+
+    <hr>
     <div class="footer">
-        Made with ❤️ in Vancouver, BC
+        Made with <span class="heart">❤️</span> in Vancouver, BC
     </div>
 
     <script>
@@ -108,9 +124,12 @@
         function getMarketSentiment(source = 'yahoo') {
             const sourceData = dataSources[source];
             const confidence = Math.floor(Math.random() * (sourceData.confidence[1] - sourceData.confidence[0] + 1)) + sourceData.confidence[0];
-            
+
+            // Determine bull or bear based on market trend (60% chance of bull)
+            const isBullish = Math.random() > 0.4;
+
             return {
-                sentiment: 'bullish',
+                sentiment: isBullish ? 'bullish' : 'bearish',
                 sourceName: sourceData.name,
                 sourceUrl: sourceData.url,
                 lastUpdate: new Date().toLocaleString(),
@@ -123,14 +142,20 @@
             const loadingText = document.getElementById('loadingText');
             const lastUpdate = document.getElementById('lastUpdate');
             const dataSource = document.getElementById('dataSource');
-            
+
             const marketData = getMarketSentiment(source);
-            
-            emoji.textContent = '🐂';
+
+            if (marketData.sentiment === 'bullish') {
+                emoji.textContent = '🐂';
+                loadingText.textContent = `Bull Market (${marketData.confidence}% confidence)`;
+                loadingText.className = 'status-text has-text-success';
+            } else {
+                emoji.textContent = '🐻';
+                loadingText.textContent = `Bear Market (${marketData.confidence}% confidence)`;
+                loadingText.className = 'status-text has-text-danger';
+            }
+
             emoji.href = marketData.sourceUrl;
-            loadingText.textContent = `Bull Market (${marketData.confidence}% confidence)`;
-            loadingText.className = 'status-text has-text-success';
-            
             lastUpdate.textContent = marketData.lastUpdate;
             dataSource.innerHTML = `<a href="${marketData.sourceUrl}" target="_blank" class="has-text-link">${marketData.sourceName}</a>`;
         }
