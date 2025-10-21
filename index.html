@@ -13,17 +13,17 @@
             padding: 0;
             min-height: 100vh;
             padding-bottom: 60px;
+            overflow-x: hidden;
         }
-        
+
         .main-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            padding: 1rem;
+            padding: 4rem 1rem 1rem 1rem;
             max-width: 100%;
-            overflow: hidden;
         }
 
         .header {
@@ -113,12 +113,12 @@
     <h1 class="header" id="headerTitle">Bull Market</h1>
 
     <div class="main-container">
-        <div class="has-text-centered" style="max-width: 600px; width: 100%; margin: 0 auto; padding: 0 1rem;">
-            <div style="margin-top: 1rem; display: flex; justify-content: center;">
-                <canvas id="marketChart" width="400" height="200" style="border: 1px solid #e0e0e0; border-radius: 8px; max-width: 100%; height: auto;"></canvas>
+        <div class="has-text-centered" style="max-width: 100%; width: 100%; margin: 0 auto; padding: 0;">
+            <div style="margin-top: 0; display: flex; justify-content: center; width: 100%; padding: 0 1rem;">
+                <canvas id="marketChart" width="1200" height="600" style="border: 1px solid #e0e0e0; border-radius: 12px; max-width: 100%; width: 100%; height: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></canvas>
             </div>
 
-            <div style="margin-top: 2rem;">
+            <div style="margin-top: 2rem; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0 1rem;">
                 <div class="buttons is-centered" style="flex-wrap: wrap; justify-content: center;">
                     <button class="button is-small is-outlined" onclick="updateFromSource('yahoo')">Yahoo Finance</button>
                     <button class="button is-small is-outlined" onclick="updateFromSource('cnn')">CNN Fear & Greed</button>
@@ -126,7 +126,7 @@
                 </div>
             </div>
 
-            <div style="margin-top: 1.5rem; font-size: 14px; color: #666; overflow-wrap: break-word;">
+            <div style="margin-top: 1.5rem; font-size: 14px; color: #666; overflow-wrap: break-word; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0 1rem;">
                 <strong>Last Updated:</strong> <span id="lastUpdate">--</span><br>
                 <strong>Source:</strong> <span id="dataSource">Market APIs</span><br>
                 <div style="margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 6px; text-align: left;">
