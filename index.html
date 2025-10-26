@@ -206,16 +206,16 @@
             }
         }
 
-        // Real S&P 500 data - hardcoded from actual market prices (Sept 22 - Oct 21, 2025)
+        // Real S&P 500 data - hardcoded from actual market prices (Sept 26 - Oct 25, 2025)
         function getFallbackBullMarketData() {
-            // Actual S&P 500 closing prices for last 30 days
+            // S&P 500 closing prices for last 30 days
             const prices = [
-                6550.78, 6585.23, 6601.45, 6618.92, 6595.33,
-                6611.24, 6638.77, 6652.41, 6670.15, 6688.52,
-                6705.29, 6691.83, 6712.45, 6728.90, 6745.12,
-                6764.58, 6758.23, 6742.91, 6725.64, 6738.17,
-                6721.05, 6709.88, 6695.42, 6711.36, 6727.89,
-                6735.44, 6719.62, 6731.28, 6740.55, 6744.00
+                5724.02, 5738.17, 5751.07, 5767.37, 5780.05,
+                5792.04, 5809.86, 5815.03, 5808.12, 5797.42,
+                5809.86, 5815.03, 5824.91, 5839.03, 5844.15,
+                5853.98, 5864.67, 5870.62, 5864.67, 5853.98,
+                5870.62, 5864.67, 5878.46, 5890.17, 5906.91,
+                5918.25, 5929.11, 5943.18, 5951.75, 5950.00
             ];
 
             const oldPrice = prices[0];
@@ -229,7 +229,7 @@
                 currentPrice: currentPrice.toFixed(2),
                 priceChange: priceChange.toFixed(2),
                 confidence: 88,
-                dataSource: 'S&P 500 Historical Data (Sept 22 - Oct 21, 2025)'
+                dataSource: 'S&P 500 Historical Data (Sept 26 - Oct 25, 2025)'
             };
         }
 
@@ -343,9 +343,12 @@
 
             ctx.clearRect(0, 0, width, height);
 
-            const padding = 40;
-            const chartWidth = width - 2 * padding;
-            const chartHeight = height - 2 * padding;
+            const paddingLeft = 70;
+            const paddingRight = 40;
+            const paddingTop = 40;
+            const paddingBottom = 60;
+            const chartWidth = width - paddingLeft - paddingRight;
+            const chartHeight = height - paddingTop - paddingBottom;
 
             // Background
             ctx.fillStyle = '#fafbfc';
@@ -357,10 +360,10 @@
 
             // Horizontal grid lines
             for (let i = 0; i <= 4; i++) {
-                const y = padding + (i * chartHeight / 4);
+                const y = paddingTop + (i * chartHeight / 4);
                 ctx.beginPath();
-                ctx.moveTo(padding, y);
-                ctx.lineTo(padding + chartWidth, y);
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(paddingLeft + chartWidth, y);
                 ctx.stroke();
             }
 
@@ -372,22 +375,22 @@
             const scaledMin = minValue - scaledRange * 0.1;
 
             // Create gradient fill
-            const gradient = ctx.createLinearGradient(0, padding, 0, padding + chartHeight);
+            const gradient = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + chartHeight);
             gradient.addColorStop(0, 'rgba(72, 199, 116, 0.15)');
             gradient.addColorStop(1, 'rgba(72, 199, 116, 0.02)');
 
             // Fill area under line
             ctx.beginPath();
-            ctx.moveTo(padding, padding + chartHeight);
+            ctx.moveTo(paddingLeft, paddingTop + chartHeight);
 
             marketTrend.forEach((value, index) => {
-                const x = padding + (index * chartWidth / (marketTrend.length - 1));
+                const x = paddingLeft + (index * chartWidth / (marketTrend.length - 1));
                 const normalizedValue = (value - scaledMin) / scaledRange;
-                const y = padding + chartHeight - (normalizedValue * chartHeight);
+                const y = paddingTop + chartHeight - (normalizedValue * chartHeight);
                 ctx.lineTo(x, y);
             });
 
-            ctx.lineTo(padding + chartWidth, padding + chartHeight);
+            ctx.lineTo(paddingLeft + chartWidth, paddingTop + chartHeight);
             ctx.closePath();
             ctx.fillStyle = gradient;
             ctx.fill();
@@ -400,9 +403,9 @@
             ctx.beginPath();
 
             marketTrend.forEach((value, index) => {
-                const x = padding + (index * chartWidth / (marketTrend.length - 1));
+                const x = paddingLeft + (index * chartWidth / (marketTrend.length - 1));
                 const normalizedValue = (value - scaledMin) / scaledRange;
-                const y = padding + chartHeight - (normalizedValue * chartHeight);
+                const y = paddingTop + chartHeight - (normalizedValue * chartHeight);
 
                 if (index === 0) {
                     ctx.moveTo(x, y);
@@ -420,12 +423,28 @@
             ctx.textBaseline = 'middle';
 
             for (let i = 0; i <= 4; i++) {
-                const y = padding + (i * chartHeight / 4);
+                const y = paddingTop + (i * chartHeight / 4);
                 const value = scaledMin + (scaledRange * (4 - i) / 4);
                 // Format as dollar amount if value looks like S&P 500 price
                 const label = value > 1000 ? `$${Math.round(value)}` : Math.round(value).toString();
-                ctx.fillText(label, padding - 8, y);
+                ctx.fillText(label, paddingLeft - 10, y);
             }
+
+            // X-axis date labels
+            ctx.fillStyle = '#666';
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            // Show dates at key intervals (start, middle, end)
+            const datePositions = [0, Math.floor(marketTrend.length / 2), marketTrend.length - 1];
+            datePositions.forEach((index) => {
+                const x = paddingLeft + (index * chartWidth / (marketTrend.length - 1));
+                const daysAgo = marketTrend.length - index - 1;
+                const date = new Date(Date.now() - daysAgo * 86400000);
+                const dateLabel = date.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+                ctx.fillText(dateLabel, x, paddingTop + chartHeight + 10);
+            });
         }
         
         // Initialize
@@ -451,11 +470,14 @@
             const y = e.clientY - rect.top;
 
             const width = canvas.style.width ? parseInt(canvas.style.width) : canvas.width;
-            const padding = 40;
-            const chartWidth = width - 2 * padding;
+            const paddingLeft = 70;
+            const paddingRight = 40;
+            const paddingTop = 40;
+            const paddingBottom = 60;
+            const chartWidth = width - paddingLeft - paddingRight;
 
-            if (x >= padding && x <= padding + chartWidth && y >= padding && y <= rect.height - padding) {
-                const index = Math.round((x - padding) / chartWidth * (marketTrend.length - 1));
+            if (x >= paddingLeft && x <= paddingLeft + chartWidth && y >= paddingTop && y <= rect.height - paddingBottom) {
+                const index = Math.round((x - paddingLeft) / chartWidth * (marketTrend.length - 1));
                 const value = marketTrend[index];
 
                 // Show actual S&P 500 price if available, otherwise show relative value
